@@ -220,7 +220,7 @@ resource "aws_ecs_task_definition" "edge" {
       interval    = 30
       timeout     = 10
       retries     = 5
-      startPeriod = 15
+      startPeriod = 20
     }
     logConfiguration = {
         logDriver = "awslogs"
