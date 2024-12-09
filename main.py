@@ -1,8 +1,23 @@
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from app.adapters.agent_mqtt_adapter import AgentMQTTAdapter
 from app.adapters.hub_http_adapter import HubHttpAdapter
 from app.adapters.hub_mqtt_adapter import HubMqttAdapter
 from config import MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_TOPIC, HUB_URL, HUB_MQTT_BROKER_HOST, HUB_MQTT_BROKER_PORT, HUB_MQTT_TOPIC
+
+class HealthcheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        # Respond with a 200 OK and simple message
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"ok\n")
+
+def start_healthcheck_server(port=1993):
+    server = HTTPServer(('0.0.0.0', port), HealthcheckHandler)
+    logging.info(f"Starting healthcheck server on port {port}")
+    server.serve_forever()
 
 if __name__ == "__main__":
     # Configure logging settings
@@ -30,6 +45,11 @@ if __name__ == "__main__":
         topic=MQTT_TOPIC,
         hub_gateway=hub_adapter,
     )
+
+    # Start the healthcheck server in a separate thread
+    healthcheck_thread = threading.Thread(target=start_healthcheck_server, args=(1993,), daemon=True)
+    healthcheck_thread.start()
+
     try:
         # Connect to the MQTT broker and start listening for messages
         agent_adapter.connect()
