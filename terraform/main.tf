@@ -253,7 +253,7 @@ resource "aws_ecs_task_definition" "edge" {
       },
       {
         name  = "HUB_MQTT_BROKER_HOST"
-        value = "hub.road-vision-cluster.local"
+        value = "mqtt.road-vision-cluster.local"
       },
       {
         name  = "HUB_MQTT_BROKER_PORT"
