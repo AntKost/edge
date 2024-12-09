@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Hub
+name: CI/CD Pipeline - Edge
 
 on:
   push:
@@ -36,10 +36,10 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t hub-service:${IMAGE_TAG} .
-          docker tag hub-service:${IMAGE_TAG} $ECR_REGISTRY/${{ vars.hub_ecr_repository_name }}:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/${{ vars.hub_ecr_repository_name }}:${IMAGE_TAG}
-          echo "IMAGE_URI=$ECR_REGISTRY/${{ vars.hub_ecr_repository_name }}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          docker build -t edge-service:${IMAGE_TAG} .
+          docker tag edge-service:${IMAGE_TAG} $ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}
+          echo "IMAGE_URI=$ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}" >> "$GITEDGE_OUTPUT"
   
       - name: Configure AWS Credentials for Terraform
         run: |
@@ -50,9 +50,9 @@ jobs:
       - name: Get current task definition
         id: get_task_def
         run: |
-          HUB_TASK_DEF_LAST=$(aws ecs describe-task-definition --task-definition="hub" | jq '.taskDefinition.taskDefinitionArn')
-          echo $HUB_TASK_DEF_LAST
-          echo "hub_task_def_last=$HUB_TASK_DEF_LAST" >> $GITHUB_OUTPUT
+          EDGE_TASK_DEF_LAST=$(aws ecs describe-task-definition --task-definition="edge" | jq '.taskDefinition.taskDefinitionArn')
+          echo $EDGE_TASK_DEF_LAST
+          echo "edge_task_def_last=$EDGE_TASK_DEF_LAST" >> $GITEDGE_OUTPUT
   
       - name: Terraform Init
         run: |
@@ -66,46 +66,46 @@ jobs:
 
       - name: Terraform Plan
         env:
-          TF_VAR_hub_image: ${{ steps.build.outputs.IMAGE_URI }}
+          TF_VAR_edge_image: ${{ steps.build.outputs.IMAGE_URI }}
         id: plan
         run: |
           cd ./terraform
-          echo $TF_VAR_hub_image
+          echo $TF_VAR_edge_image
           terraform plan -out=tfplan
 
       - name: Terraform Apply
         id: apply
         env:
-          TF_VAR_hub_image: ${{ steps.build.outputs.IMAGE_URI }}
+          TF_VAR_edge_image: ${{ steps.build.outputs.IMAGE_URI }}
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           cd ./terraform
-          echo $TF_VAR_hub_image
+          echo $TF_VAR_edge_image
           terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs
         id: tf_outputs
         shell: bash
         run: |
-          HUB_TASK_DEF_NEW=$(terraform -chdir=./terraform output -raw hub_task_definition_arn)
-          HUB_CODEDEPLOY_APP_NAME=$(terraform -chdir=./terraform output -raw codedeploy_hub_app_name)
-          HUB_CODEDEPLOY_DEPLOYMENT_GROUP=$(terraform -chdir=./terraform output -raw codedeploy_hub_deployment_group_name)
-          echo "hub_task_def_new=$HUB_TASK_DEF_NEW" >> $GITHUB_OUTPUT
-          echo "hub_codedeploy_app=$HUB_CODEDEPLOY_APP_NAME" >> $GITHUB_OUTPUT
-          echo "hub_codedeploy_deploy_group=$HUB_CODEDEPLOY_DEPLOYMENT_GROUP" >> $GITHUB_OUTPUT
+          EDGE_TASK_DEF_NEW=$(terraform -chdir=./terraform output -raw edge_task_definition_arn)
+          EDGE_CODEDEPLOY_APP_NAME=$(terraform -chdir=./terraform output -raw codedeploy_edge_app_name)
+          EDGE_CODEDEPLOY_DEPLOYMENT_GROUP=$(terraform -chdir=./terraform output -raw codedeploy_edge_deployment_group_name)
+          echo "edge_task_def_new=$EDGE_TASK_DEF_NEW" >> $GITEDGE_OUTPUT
+          echo "edge_codedeploy_app=$EDGE_CODEDEPLOY_APP_NAME" >> $GITEDGE_OUTPUT
+          echo "edge_codedeploy_deploy_group=$EDGE_CODEDEPLOY_DEPLOYMENT_GROUP" >> $GITEDGE_OUTPUT
           echo "Terraform outputs retrieved:"
-          echo "hub_task_def_new=$HUB_TASK_DEF_NEW"
-          echo "hub_codedeploy_app=$HUB_CODEDEPLOY_APP_NAME"
-          echo "hub_codedeploy_deploy_group=$HUB_CODEDEPLOY_DEPLOYMENT_GROUP"
+          echo "edge_task_def_new=$EDGE_TASK_DEF_NEW"
+          echo "edge_codedeploy_app=$EDGE_CODEDEPLOY_APP_NAME"
+          echo "edge_codedeploy_deploy_group=$EDGE_CODEDEPLOY_DEPLOYMENT_GROUP"
       
-      - name: Generate HUB AppSpec and Task Definition
-        if: ${{ steps.get_task_def.outputs.HUB_TASK_DEF_LAST != steps.tf_outputs.outputs.hub_task_def_new }}
+      - name: Generate EDGE AppSpec and Task Definition
+        if: ${{ steps.get_task_def.outputs.EDGE_TASK_DEF_LAST != steps.tf_outputs.outputs.edge_task_def_new }}
         env:
-          container_port: 8000
-          container_name: hub
+          container_port: 1993
+          container_name: edge
         run: |
           export TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition="$container_name" | jq '.taskDefinition.taskDefinitionArn')
-          cat <<EOF > hub_appspec.json
+          cat <<EOF > edge_appspec.json
           {
             "version": 1,
             "Resources": [
@@ -115,8 +115,8 @@ jobs:
                   "Properties": {
                     "TaskDefinition": $TASK_DEF_ARN,
                     "LoadBalancerInfo": {
-                      "ContainerName": "hub",
-                      "ContainerPort": 8000
+                      "ContainerName": "edge",
+                      "ContainerPort": 1993
                     }
                   }
                 }
@@ -124,19 +124,19 @@ jobs:
             ]
           }
           EOF
-          cat hub_appspec.json
-          aws ecs describe-task-definition --task-definition "hub" --query taskDefinition > task-definition.json
+          cat edge_appspec.json
+          aws ecs describe-task-definition --task-definition "edge" --query taskDefinition > task-definition.json
 
       - name: ECS task deployment using CodeDeploy
-        if: ${{ steps.get_task_def.outputs.HUB_TASK_DEF_LAST != steps.tf_outputs.outputs.hub_task_def_new }}
+        if: ${{ steps.get_task_def.outputs.EDGE_TASK_DEF_LAST != steps.tf_outputs.outputs.edge_task_def_new }}
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         env:
           ACTIONS_STEP_DEBUG: true #enable step debug logging
         with:
           task-definition: task-definition.json
-          service: hub-service
+          service: edge-service
           cluster: road-vision-cluster
           wait-for-service-stability: false
-          codedeploy-appspec: hub_appspec.json
-          codedeploy-application: hub-codedeploy-app
-          codedeploy-deployment-group: hub-deployment-group
+          codedeploy-appspec: edge_appspec.json
+          codedeploy-application: edge-codedeploy-app
+          codedeploy-deployment-group: edge-deployment-group
