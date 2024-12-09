@@ -8,15 +8,15 @@ terraform {
   }
   backend "s3" {
     bucket         = "rv-terraform-state-bucket"        # Same as shared infra
-    key            = "store/terraform.tfstate"           # Unique key for the store service
+    key            = "edge/terraform.tfstate"           # Unique key for the edge service
     region         = "eu-central-1"                      
-    dynamodb_table = "terraform-locks"                   # DynamoDB table for state locking
+    dynamodb_table = "terraform-locks"                   # DynamoDB table for edge locking
     encrypt        = true
-    profile = "rv-terraform"
+    profile        = "rv-terraform"
   }
 }
 
 provider "aws" {
-  region = var.aws_region
-  profile = "rv-terraform"
+  region    = var.aws_region
+  profile   = "rv-terraform"
 }

@@ -7,7 +7,7 @@ from config import MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_TOPIC, HUB_URL, HUB_
 if __name__ == "__main__":
     # Configure logging settings
     logging.basicConfig(
-        level=logging.INFO,  # Set the log level to INFO (you can use logging.DEBUG for more detailed logs)
+        level=logging.DEBUG,  # Set the log level to INFO (you can use logging.DEBUG for more detailed logs)
         format="[%(asctime)s] [%(levelname)s] [%(module)s] %(message)s",
         handlers=[
             logging.StreamHandler(),  # Output log messages to the console

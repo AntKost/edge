@@ -4,52 +4,52 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "store_image" {
-  description = "Docker image for the Store service"
+variable "edge_image" {
+  description = "Docker image for the Edge service"
   type        = string
-  default     = "docker-image:latest"
+  default     = "edge:latest"
 }
 
-variable "store_cpu" {
-  description = "CPU units for the Store task"
+variable "edge_cpu" {
+  description = "CPU units for the Edge task"
   type        = string
-  default     = "256"
+  default     = "512"
 }
 
-variable "store_memory" {
-  description = "Memory (in MiB) for the Store task"
+variable "edge_memory" {
+  description = "Memory (in MiB) for the Edge task"
   type        = string
   default     = "512"
 }
 
 variable "desired_count" {
-  description = "Desired number of Store service tasks"
+  description = "Desired number of Edge service tasks"
   type        = number
   default     = 1
 }
 
 variable "service_name" {
-  description = "Name of the Store service"
+  description = "Name of the Edge service"
   type        = string
-  default     = "store-service"
+  default     = "edge-service"
 }
 
 variable "container_port" {
-  description = "Port on which the Store container listens"
+  description = "Port on which the Edge container listens"
   type        = number
-  default     = 8000
+  default     = 1993
 }
 
-variable "db_password" {
-  description = "RDS PostgreSQL DB password"
-  type = string
-  sensitive = true
+variable "host_port" {
+  description = "Port on which the Edge host listens"
+  type        = number
+  default     = 1993
 }
 
-variable "store_ecr_repository_name" {
-  description = "Name of the ECR repository for the Store service"
+variable "edge_ecr_repository_name" {
+  description = "Name of the ECR repository for the Edge service"
   type        = string
-  default     = "store-repo"
+  default     = "edge-repo"
 }
 
 variable "image_tag_mutability" {
