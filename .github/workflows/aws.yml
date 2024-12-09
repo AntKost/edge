@@ -39,7 +39,7 @@ jobs:
           docker build -t edge-service:${IMAGE_TAG} .
           docker tag edge-service:${IMAGE_TAG} $ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}
           docker push $ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}
-          echo "IMAGE_URI=$ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}" >> "$GITEDGE_OUTPUT"
+          echo "IMAGE_URI=$ECR_REGISTRY/${{ vars.edge_ecr_repository_name }}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
   
       - name: Configure AWS Credentials for Terraform
         run: |
@@ -52,7 +52,7 @@ jobs:
         run: |
           EDGE_TASK_DEF_LAST=$(aws ecs describe-task-definition --task-definition="edge" | jq '.taskDefinition.taskDefinitionArn')
           echo $EDGE_TASK_DEF_LAST
-          echo "edge_task_def_last=$EDGE_TASK_DEF_LAST" >> $GITEDGE_OUTPUT
+          echo "edge_task_def_last=$EDGE_TASK_DEF_LAST" >> $GITHUB_OUTPUT
   
       - name: Terraform Init
         run: |
@@ -90,9 +90,9 @@ jobs:
           EDGE_TASK_DEF_NEW=$(terraform -chdir=./terraform output -raw edge_task_definition_arn)
           EDGE_CODEDEPLOY_APP_NAME=$(terraform -chdir=./terraform output -raw codedeploy_edge_app_name)
           EDGE_CODEDEPLOY_DEPLOYMENT_GROUP=$(terraform -chdir=./terraform output -raw codedeploy_edge_deployment_group_name)
-          echo "edge_task_def_new=$EDGE_TASK_DEF_NEW" >> $GITEDGE_OUTPUT
-          echo "edge_codedeploy_app=$EDGE_CODEDEPLOY_APP_NAME" >> $GITEDGE_OUTPUT
-          echo "edge_codedeploy_deploy_group=$EDGE_CODEDEPLOY_DEPLOYMENT_GROUP" >> $GITEDGE_OUTPUT
+          echo "edge_task_def_new=$EDGE_TASK_DEF_NEW" >> $GITHUB_OUTPUT
+          echo "edge_codedeploy_app=$EDGE_CODEDEPLOY_APP_NAME" >> $GITHUB_OUTPUT
+          echo "edge_codedeploy_deploy_group=$EDGE_CODEDEPLOY_DEPLOYMENT_GROUP" >> $GITHUB_OUTPUT
           echo "Terraform outputs retrieved:"
           echo "edge_task_def_new=$EDGE_TASK_DEF_NEW"
           echo "edge_codedeploy_app=$EDGE_CODEDEPLOY_APP_NAME"
